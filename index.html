@@ -123,6 +123,33 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .panel { display: none; }
 .panel.active { display: block; }
 
+/* ── SIDEBAR (solo escritorio) ──────────────────────────────────
+   Mismo HTML y JS de siempre (#app-tabs se sigue llenando igual);
+   en pantallas angostas (celular) no cambia nada — sigue siendo la
+   barra horizontal de arriba con flex-wrap. */
+@media (min-width: 860px) {
+  .main {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    align-items: start;
+    gap: 28px;
+    max-width: 1280px;
+  }
+  .app-tabs {
+    grid-column: 1;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 3px;
+    margin-bottom: 0;
+    position: sticky;
+    top: 72px;
+    max-height: calc(100vh - 88px);
+    overflow-y: auto;
+  }
+  .app-tab { width: 100%; text-align: left; }
+  .panel { grid-column: 2; min-width: 0; }
+}
+
 /* ── CARD ── */
 .card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 24px; margin-bottom: 20px; }
 .card-title { font-size: 15px; font-weight: 600; color: var(--navy); margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -479,6 +506,13 @@ tr:hover td { background: #EFF6FF; }
             <option value="">Todas</option>
             <option>U9</option><option>U11</option><option>U13</option><option>U15</option><option>U17</option>
             <option>Sub21</option><option>Sub23</option><option>Adulto</option><option>Senior</option><option>Maxi</option><option>3x3</option>
+          </select>
+          <label style="font-size:12px;color:var(--muted)">Federado:</label>
+          <select id="jg-filtro-federado" onchange="cargarJugadores()">
+            <option value="">Todos</option>
+            <option value="si">Federados</option>
+            <option value="no">No federados</option>
+            <option value="tramite">En trámite</option>
           </select>
           <label id="jg-filtro-club-lbl" style="font-size:12px;color:var(--muted);display:none">Club:</label>
           <select id="jg-filtro-club" onchange="cargarJugadores()" style="display:none">
@@ -943,6 +977,17 @@ function convertirFechaExcel(valor) {
 // (dd-mm-yyyy) y la muestra como "X años, Y meses" — nunca la fecha
 // cruda, solo el tiempo transcurrido, en todas las pantallas donde
 // aparece el jugador.
+// Normaliza el valor de "Federado" guardado en la hoja (que puede venir
+// como "Sí", "Si", "si", "En trámite", "En tramite", etc.) a una clave
+// simple: "si" | "no" | "tramite". Usado para filtrar sin depender de
+// tildes/mayúsculas exactas, igual que esFederado() en el backend.
+function normFederado(valor) {
+  const v = (valor||"").toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if (v === "si") return "si";
+  if (v.indexOf("tramite") > -1) return "tramite";
+  return "no"; // incluye "no" y vacío
+}
+
 function antiguedadClub(fechaIngresoDMY) {
   if (!fechaIngresoDMY || typeof fechaIngresoDMY !== "string") return "—";
   const partes = fechaIngresoDMY.split("-");
@@ -1599,9 +1644,11 @@ async function cargarJugadores() {
     }
 
     const filtroCat = document.getElementById("jg-filtro-cat").value;
+    const filtroFed = document.getElementById("jg-filtro-federado").value;
     const filtroClub = esAdmin ? document.getElementById("jg-filtro-club").value : "";
     const soloPendientes = esAdmin && document.getElementById("jg-filtro-pendientes").checked;
     if (filtroCat) jugadores = jugadores.filter(j => j.categoria === filtroCat);
+    if (filtroFed) jugadores = jugadores.filter(j => normFederado(j.federado) === filtroFed);
     if (filtroClub) jugadores = jugadores.filter(j => j.club === filtroClub);
     if (soloPendientes) jugadores = jugadores.filter(j => j.estado === "En revisión");
     JUGADORES_CACHE = jugadores;
