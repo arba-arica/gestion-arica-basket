@@ -518,6 +518,16 @@ tr:hover td { background: #EFF6FF; }
           <select id="jg-filtro-club" onchange="cargarJugadores()" style="display:none">
             <option value="">Todos los clubes</option>
           </select>
+          <label style="font-size:12px;color:var(--muted)">Estado:</label>
+          <select id="jg-filtro-estado" onchange="cargarJugadores()">
+            <option value="">Todos</option>
+            <option>En revisión</option>
+            <option>Activo</option>
+            <option>Inactivo</option>
+            <option>Suspendido</option>
+            <option>Transferido</option>
+            <option>Baja</option>
+          </select>
           <label id="jg-filtro-pendientes-lbl" style="font-size:12px;color:var(--amber);display:none;font-weight:600;cursor:pointer">
             <input type="checkbox" id="jg-filtro-pendientes" onchange="cargarJugadores()" style="vertical-align:middle"> Solo pendientes de revisión
           </label>
@@ -1335,6 +1345,12 @@ function cardRevisionCM(j) {
       </div>`
     : `<p style="font-size:11.5px;color:var(--muted);margin-top:10px">Esperando que el club complete los 5 documentos.</p>`;
 
+  const eliminarBtn = subidos > 0
+    ? `<div style="margin-top:10px">
+        <button class="btn-sec" style="color:var(--red);border-color:#FCA5A5;padding:5px 12px;font-size:11.5px" onclick="eliminarCargaCM('${j.rut}','${nombreEsc}')">🗑️ Eliminar carga completa</button>
+      </div>`
+    : "";
+
   const obsTexto = j.observacion ? `<p style="font-size:12px;color:var(--red);margin-top:8px">Observación: ${j.observacion}</p>` : "";
 
   return `<div class="card" id="cmr-card-${rutId}">
@@ -1345,6 +1361,7 @@ function cardRevisionCM(j) {
     <div style="margin-top:10px">${docs}</div>
     ${obsTexto}
     ${acciones}
+    ${eliminarBtn}
   </div>`;
 }
 
@@ -1357,6 +1374,18 @@ async function revisarCM(rut, nombre, estado) {
   try {
     const r = await api({ action: "cmActualizarRevision", rut, estado, observacion });
     toast(r.msg || (r.ok ? "Actualizado" : "Error"), r.ok ? "ok" : "err");
+    if (r.ok) cargarRevisionCM();
+  } catch(e) { toast("Error de conexión.", "err"); }
+}
+
+// Elimina por completo la carga de un jugador (fila de seguimiento +
+// los 5 documentos en Drive). Acción destructiva — pide confirmación
+// explícita. Deja al club con la pantalla de carga vacía de nuevo.
+async function eliminarCargaCM(rut, nombre) {
+  if (!confirm(`¿Eliminar por completo la carga de "${nombre}"?\n\nSe borrarán los 5 documentos de Drive y el registro de seguimiento. El club deberá volver a subir todo desde cero.\n\nEsta acción no se puede deshacer.`)) return;
+  try {
+    const r = await api({ action: "eliminarCargaCM", rut });
+    toast(r.msg || (r.ok ? "Carga eliminada" : "Error"), r.ok ? "ok" : "err");
     if (r.ok) cargarRevisionCM();
   } catch(e) { toast("Error de conexión.", "err"); }
 }
@@ -1646,15 +1675,17 @@ async function cargarJugadores() {
     const filtroCat = document.getElementById("jg-filtro-cat").value;
     const filtroFed = document.getElementById("jg-filtro-federado").value;
     const filtroClub = esAdmin ? document.getElementById("jg-filtro-club").value : "";
+    const filtroEstado = document.getElementById("jg-filtro-estado").value;
     const soloPendientes = esAdmin && document.getElementById("jg-filtro-pendientes").checked;
     if (filtroCat) jugadores = jugadores.filter(j => j.categoria === filtroCat);
     if (filtroFed) jugadores = jugadores.filter(j => normFederado(j.federado) === filtroFed);
     if (filtroClub) jugadores = jugadores.filter(j => j.club === filtroClub);
+    if (filtroEstado) jugadores = jugadores.filter(j => j.estado === filtroEstado);
     if (soloPendientes) jugadores = jugadores.filter(j => j.estado === "En revisión");
     JUGADORES_CACHE = jugadores;
 
     if (jugadores.length === 0) {
-      el.innerHTML = `<p style="color:var(--muted);padding:12px;font-size:13px">${soloPendientes?"No hay jugadores pendientes de revisión.":"Sin jugadores para mostrar. Agrégalos con el formulario de abajo o importa una nómina .xlsx."}</p>`;
+      el.innerHTML = `<p style="color:var(--muted);padding:12px;font-size:13px">${(soloPendientes||filtroEstado==="En revisión")?"No hay jugadores pendientes de revisión.":"Sin jugadores para mostrar. Agrégalos con el formulario de abajo o importa una nómina .xlsx."}</p>`;
       return;
     }
 
