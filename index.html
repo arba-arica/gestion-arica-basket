@@ -340,6 +340,9 @@ tr:hover td { background: #EFF6FF; }
       <button class="access-btn" onclick="showAccess('cargamasiva')">
         <span class="t">📎 Carga Masiva FEBA</span>
       </button>
+      <button class="access-btn" onclick="showAccess('secretaria')">
+        <span class="t">📝 Reuniones (Secretaría)</span>
+      </button>
     </div>
   </div>
 
@@ -405,6 +408,26 @@ tr:hover td { background: #EFF6FF; }
     <button class="btn-login" onclick="doLogin('cargamasiva')">Ingresar</button>
     <div id="login-error-cargamasiva" class="login-error"></div>
     <div class="login-public-link"><a onclick="copiarEnlaceAcceso('cargamasiva')">🔗 Copiar enlace directo a este acceso</a></div>
+  </div>
+
+  <!-- Login Secretaría (Reuniones / Actas) -->
+  <div id="login-secretaria-card" class="login-card" style="display:none">
+    <span class="back-link" onclick="showAccess('selector')">← Volver</span>
+    <div class="login-logo">
+      <h1 style="font-size:17px">Reuniones — Secretaría</h1>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px">Acceso acotado: solo permite gestionar actas de reunión</p>
+    </div>
+    <div class="field">
+      <label>Usuario</label>
+      <input id="l-usuario-sec" type="text" placeholder="Usuario" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Clave</label>
+      <input id="l-clave-sec" type="password" placeholder="••••••••••••••" autocomplete="off">
+    </div>
+    <button class="btn-login" onclick="doLogin('secretaria')">Ingresar</button>
+    <div id="login-error-secretaria" class="login-error"></div>
+    <div class="login-public-link"><a onclick="copiarEnlaceAcceso('secretaria')">🔗 Copiar enlace directo a este acceso</a></div>
   </div>
 
   <!-- Búsqueda pública por RUT (sin login) -->
@@ -828,6 +851,43 @@ tr:hover td { background: #EFF6FF; }
       </div>
     </div>
 
+    <!-- Panel: Actas de reunión -->
+    <div id="panel-actas" class="panel">
+      <div class="card">
+        <div class="card-title">Actas de reunión <span id="actas-subtitulo">Borrador → Publicada</span></div>
+        <div id="actas-lista"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+
+      <div class="card" id="card-nueva-acta">
+        <div class="card-title" id="ac-form-title">Nueva acta (borrador) <span>Solo Administrador</span></div>
+        <input type="hidden" id="ac-id" value="">
+        <div class="form-grid">
+          <div class="fld"><label>Fecha <span class="req">*</span></label><input id="ac-fecha" type="date"></div>
+          <div class="fld"><label>Tipo de reunión <span class="req">*</span></label><select id="ac-tipo"><option value="">— elegir —</option><option>Directorio</option><option>Asamblea de clubes</option><option>Comisión técnica</option><option>Comisión disciplinaria</option><option>Extraordinaria</option><option>Otra</option></select></div>
+          <div class="fld"><label>Hora</label><input id="ac-hora" type="time"></div>
+          <div class="fld"><label>Modalidad</label><select id="ac-modalidad"><option value="">— elegir —</option><option>Presencial</option><option>Online</option><option>Híbrida</option></select></div>
+          <div class="fld full"><label>Lugar</label><input id="ac-lugar" type="text" placeholder="Ej: Sede ARBA Arica, o link de la videollamada si es online"></div>
+          <div class="fld full"><label>Asunto <span class="req">*</span></label><input id="ac-asunto" type="text" placeholder="Ej: Reunión ordinaria de directorio — marzo 2026"></div>
+
+          <div class="form-section">Asistencia</div>
+          <div class="fld full">
+            <div id="ac-clubes-checklist" style="border:1px solid var(--border);border-radius:8px;padding:10px;max-height:280px;overflow-y:auto">
+              <p style="font-size:12px;color:var(--muted)">Cargando clubes...</p>
+            </div>
+            <p style="font-size:11px;color:var(--hint);margin-top:6px">Por defecto todos quedan "Ausente" — marca Presente o Ausente justificado según corresponda.</p>
+          </div>
+          <div class="fld full"><label>Invitados / otros asistentes</label><input id="ac-invitados" type="text" placeholder="Personas o entidades no listadas como club"></div>
+
+          <div class="form-section">Contenido</div>
+          <div class="fld full"><label>Temas tratados</label><textarea id="ac-temas" placeholder="Puntos de la tabla / agenda discutidos"></textarea></div>
+          <div class="fld full"><label>Acuerdos y resoluciones</label><textarea id="ac-acuerdos" placeholder="Lo que quedó resuelto o acordado en la reunión"></textarea></div>
+          <div class="fld"><label>Responsable (Secretario/a)</label><input id="ac-responsable" type="text"></div>
+        </div>
+        <button class="btn-submit" id="ac-btn-guardar" onclick="guardarActaBorrador()">💾 Guardar borrador</button>
+        <button class="btn-sec" id="ac-btn-cancelar" onclick="cancelarEdicionActa()" style="display:none">Cancelar</button>
+      </div>
+    </div>
+
     <!-- Panel: Consulta -->
     <div id="panel-consulta" class="panel">
       <div class="card">
@@ -1066,6 +1126,7 @@ function showAccess(which) {
   document.getElementById("login-club-card").style.display  = which === "club"     ? "block" : "none";
   document.getElementById("login-admin-card").style.display = which === "admin"    ? "block" : "none";
   document.getElementById("login-cargamasiva-card").style.display = which === "cargamasiva" ? "block" : "none";
+  document.getElementById("login-secretaria-card").style.display = which === "secretaria" ? "block" : "none";
   document.getElementById("public-card").classList.toggle("show", which === "publico");
   document.getElementById("public-card").style.display = which === "publico" ? "block" : "none";
   if (which === "publico") {
@@ -1075,7 +1136,7 @@ function showAccess(which) {
   }
 
   // Reflejar el acceso en la URL para poder compartir el enlace directo
-  const mapUrl = { club: "club", admin: "admin", publico: "consulta", cargamasiva: "cargamasiva" };
+  const mapUrl = { club: "club", admin: "admin", publico: "consulta", cargamasiva: "cargamasiva", secretaria: "secretaria" };
   const url = new URL(window.location.href);
   if (mapUrl[which]) url.searchParams.set("acceso", mapUrl[which]);
   else url.searchParams.delete("acceso");
@@ -1084,7 +1145,7 @@ function showAccess(which) {
 
 // Copia al portapapeles el enlace directo al acceso que se está viendo
 function copiarEnlaceAcceso(tipo) {
-  const mapUrl = { club: "club", admin: "admin", publico: "consulta", cargamasiva: "cargamasiva" };
+  const mapUrl = { club: "club", admin: "admin", publico: "consulta", cargamasiva: "cargamasiva", secretaria: "secretaria" };
   const url = new URL(window.location.href);
   url.search = ""; url.hash = "";
   url.searchParams.set("acceso", mapUrl[tipo]);
@@ -1099,15 +1160,15 @@ function copiarEnlaceAcceso(tipo) {
 (function abrirAccesoDesdeURL() {
   const params = new URLSearchParams(window.location.search);
   const acceso = params.get("acceso");
-  const mapAcceso = { club: "club", admin: "admin", consulta: "publico", cargamasiva: "cargamasiva" };
+  const mapAcceso = { club: "club", admin: "admin", consulta: "publico", cargamasiva: "cargamasiva", secretaria: "secretaria" };
   if (acceso && mapAcceso[acceso]) showAccess(mapAcceso[acceso]);
 })();
 
 async function doLogin(tipo) {
-  const errId = tipo === "club" ? "login-error-club" : tipo === "cargamasiva" ? "login-error-cargamasiva" : "login-error-admin";
+  const errId = tipo === "club" ? "login-error-club" : tipo === "cargamasiva" ? "login-error-cargamasiva" : tipo === "secretaria" ? "login-error-secretaria" : "login-error-admin";
   const errEl = document.getElementById(errId);
   errEl.classList.remove("show");
-  const cardId = tipo === "club" ? "login-club-card" : tipo === "cargamasiva" ? "login-cargamasiva-card" : "login-admin-card";
+  const cardId = tipo === "club" ? "login-club-card" : tipo === "cargamasiva" ? "login-cargamasiva-card" : tipo === "secretaria" ? "login-secretaria-card" : "login-admin-card";
   const btn = document.querySelector("#"+cardId+" .btn-login");
   btn.disabled = true; btn.textContent = "Verificando...";
 
@@ -1124,6 +1185,12 @@ async function doLogin(tipo) {
       rutClub: document.getElementById("l-rut-cm").value.trim(),
       clave:   document.getElementById("l-clave-cm").value.trim(),
       correo:  document.getElementById("l-correo-cm").value.trim()
+    };
+  } else if (tipo === "secretaria") {
+    body = {
+      action:  "login",
+      usuario: document.getElementById("l-usuario-sec").value.trim(),
+      clave:   document.getElementById("l-clave-sec").value.trim()
     };
   } else {
     body = {
@@ -1390,6 +1457,191 @@ async function eliminarCargaCM(rut, nombre) {
   } catch(e) { toast("Error de conexión.", "err"); }
 }
 
+// ══════════════════════════════════════════════════════════
+// MÓDULO ACTAS DE REUNIÓN
+// ══════════════════════════════════════════════════════════
+let ACTAS_CACHE = [];
+let CLUBES_ACTA_CACHE = [];
+
+async function cargarActas() {
+  const esAdmin = SESSION.rol === "admin" || SESSION.rol === "secretaria";
+  document.getElementById("card-nueva-acta").style.display = esAdmin ? "block" : "none";
+  document.getElementById("actas-subtitulo").textContent = esAdmin ? "Borrador → Publicada" : "Actas publicadas";
+  if (esAdmin && CLUBES_ACTA_CACHE.length === 0) await cargarClubesParaActa();
+
+  const cont = document.getElementById("actas-lista");
+  cont.innerHTML = `<div class="loading"><div class="spinner"></div>Cargando...</div>`;
+  try {
+    const r = await api({ action: "getActas" });
+    if (!r.ok) { cont.innerHTML = `<p style="color:var(--red)">${r.msg||"Error cargando actas."}</p>`; return; }
+    ACTAS_CACHE = r.actas || [];
+    if (!ACTAS_CACHE.length) { cont.innerHTML = `<p style="color:var(--muted);font-size:13px;padding:12px">Sin actas ${esAdmin?"":"publicadas "}aún.</p>`; return; }
+    cont.innerHTML = ACTAS_CACHE.map(a => cardActa(a, esAdmin)).join("");
+  } catch(e) { cont.innerHTML = `<p style="color:var(--red)">Error de conexión.</p>`; }
+}
+
+function cardActa(a, esAdmin) {
+  const badgeEstado = a.estado === "Publicada" ? `<span class="badge b-ok">Publicada</span>` : `<span class="badge b-gray">Borrador</span>`;
+  const totalPresentes = (a.asistentes||[]).length;
+  const totalAusentes = (a.ausentesJustificados||[]).length + (a.ausentesNoJustificados||[]).length;
+
+  let acciones = "";
+  if (esAdmin && a.estado === "Borrador") {
+    acciones = `<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn-sec" style="margin:0;padding:6px 12px;font-size:12px" onclick="editarActaUI(${a.id})">✏️ Editar</button>
+      <button class="btn-xls" onclick="publicarActaUI(${a.id})">📄 Publicar y generar PDF</button>
+      <button class="btn-sec" style="margin:0;padding:6px 12px;font-size:12px;color:var(--red);border-color:#FCA5A5" onclick="eliminarActaUI(${a.id})">🗑️ Eliminar</button>
+    </div>`;
+  } else if (a.estado === "Publicada") {
+    const asuntoEsc = (a.asunto||"").replace(/'/g,"\\'");
+    acciones = `<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <a href="${a.pdfLink}" target="_blank" rel="noopener" class="btn-xls sec" style="text-decoration:none">⬇ Descargar PDF</a>
+      <button class="btn-xls" onclick="compartirActaWhatsApp('${a.pdfLink}','${asuntoEsc}')">📲 Compartir por WhatsApp</button>
+    </div>`;
+  }
+
+  return `<div class="card">
+    <div class="cm-card-head">
+      <div><b>${a.asunto}</b><div style="font-size:11.5px;color:var(--muted)">${a.tipo||"—"} · ${a.fecha||"—"}${a.hora?" "+a.hora:""}${a.modalidad?" · "+a.modalidad:""}${a.lugar?" · "+a.lugar:""}</div></div>
+      ${badgeEstado}
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:8px">Asistencia: ${totalPresentes} presentes, ${totalAusentes} ausentes${a.invitados?` · Invitados: ${a.invitados}`:""}</p>
+    ${a.acuerdos?`<p style="font-size:12.5px;margin-top:6px"><b>Acuerdos:</b> ${a.acuerdos.slice(0,200)}${a.acuerdos.length>200?"…":""}</p>`:""}
+    ${acciones}
+  </div>`;
+}
+
+async function cargarClubesParaActa() {
+  try {
+    const r = await api({ action: "getClubesLista" });
+    CLUBES_ACTA_CACHE = (r.clubes||[]).map(c=>c.nombre).sort((a,b)=>a.localeCompare(b,"es"));
+  } catch(e) { CLUBES_ACTA_CACHE = []; }
+  renderChecklistActa();
+}
+
+// Dibuja el checklist de asistencia. presentes/justificados son arrays
+// opcionales (para precargar al editar un borrador) — todo lo que no
+// esté en esos dos arrays queda marcado "Ausente" por defecto.
+function renderChecklistActa(presentes, justificados) {
+  presentes = presentes || [];
+  justificados = justificados || [];
+  const cont = document.getElementById("ac-clubes-checklist");
+  if (!CLUBES_ACTA_CACHE.length) { cont.innerHTML = `<p style="font-size:12px;color:var(--muted)">No hay clubes registrados.</p>`; return; }
+  cont.innerHTML = CLUBES_ACTA_CACHE.map((club, i) => {
+    const estado = presentes.includes(club) ? "presente" : justificados.includes(club) ? "justificado" : "ausente";
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 4px;font-size:13px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <span>${club}</span>
+      <span style="display:flex;gap:10px;font-size:11.5px;white-space:nowrap">
+        <label><input type="radio" name="ac-club-${i}" value="presente" ${estado==="presente"?"checked":""}> Presente</label>
+        <label><input type="radio" name="ac-club-${i}" value="justificado" ${estado==="justificado"?"checked":""}> Aus. justif.</label>
+        <label><input type="radio" name="ac-club-${i}" value="ausente" ${estado==="ausente"?"checked":""}> Ausente</label>
+      </span>
+    </div>`;
+  }).join("");
+}
+
+function leerAsistenciaChecklist() {
+  const asistentes = [], ausentesJustificados = [], ausentesNoJustificados = [];
+  CLUBES_ACTA_CACHE.forEach((club, i) => {
+    const marcado = document.querySelector(`input[name="ac-club-${i}"]:checked`);
+    const valor = marcado ? marcado.value : "ausente";
+    if (valor === "presente") asistentes.push(club);
+    else if (valor === "justificado") ausentesJustificados.push(club);
+    else ausentesNoJustificados.push(club);
+  });
+  return { asistentes, ausentesJustificados, ausentesNoJustificados };
+}
+
+async function guardarActaBorrador() {
+  const fecha = fechaInput("ac-fecha");
+  const tipo = document.getElementById("ac-tipo").value;
+  const asunto = document.getElementById("ac-asunto").value.trim();
+  if (!fecha || !tipo || !asunto) { toast("Fecha, tipo y asunto son obligatorios","err"); return; }
+
+  const { asistentes, ausentesJustificados, ausentesNoJustificados } = leerAsistenciaChecklist();
+  const id = document.getElementById("ac-id").value;
+
+  const datos = {
+    fecha, tipo, asunto,
+    hora: document.getElementById("ac-hora").value,
+    lugar: document.getElementById("ac-lugar").value.trim(),
+    modalidad: document.getElementById("ac-modalidad").value,
+    asistentes, ausentesJustificados, ausentesNoJustificados,
+    invitados: document.getElementById("ac-invitados").value.trim(),
+    temasTratados: document.getElementById("ac-temas").value.trim(),
+    acuerdos: document.getElementById("ac-acuerdos").value.trim(),
+    responsable: document.getElementById("ac-responsable").value.trim()
+  };
+  if (id !== "") datos.id = id;
+
+  try {
+    const r = await api({ action: "guardarActa", datos });
+    toast(r.msg || (r.ok?"Guardado":"Error"), r.ok?"ok":"err");
+    if (r.ok) { cancelarEdicionActa(); cargarActas(); }
+  } catch(e) { toast("Error de conexión.","err"); }
+}
+
+function editarActaUI(id) {
+  const a = ACTAS_CACHE.find(x => x.id === id);
+  if (!a) { toast("No se encontró el acta","err"); return; }
+  if (a.estado === "Publicada") { toast("Las actas publicadas no se pueden editar","err"); return; }
+
+  document.getElementById("ac-id").value = a.id;
+  document.getElementById("ac-fecha").value = isoDesdeDMY(a.fecha);
+  setSelectVal("ac-tipo", a.tipo);
+  document.getElementById("ac-hora").value = a.hora || "";
+  document.getElementById("ac-lugar").value = a.lugar || "";
+  setSelectVal("ac-modalidad", a.modalidad);
+  document.getElementById("ac-asunto").value = a.asunto || "";
+  document.getElementById("ac-invitados").value = a.invitados || "";
+  document.getElementById("ac-temas").value = a.temasTratados || "";
+  document.getElementById("ac-acuerdos").value = a.acuerdos || "";
+  document.getElementById("ac-responsable").value = a.responsable || "";
+  renderChecklistActa(a.asistentes, a.ausentesJustificados);
+
+  document.getElementById("ac-form-title").textContent = "Editando borrador";
+  document.getElementById("ac-btn-guardar").textContent = "💾 Guardar cambios";
+  document.getElementById("ac-btn-cancelar").style.display = "inline-block";
+  document.getElementById("card-nueva-acta").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+function cancelarEdicionActa() {
+  document.getElementById("ac-id").value = "";
+  ["ac-fecha","ac-asunto","ac-hora","ac-lugar","ac-invitados","ac-temas","ac-acuerdos","ac-responsable"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("ac-tipo").selectedIndex = 0;
+  document.getElementById("ac-modalidad").selectedIndex = 0;
+  renderChecklistActa();
+  document.getElementById("ac-form-title").textContent = "Nueva acta (borrador)";
+  document.getElementById("ac-btn-guardar").textContent = "💾 Guardar borrador";
+  document.getElementById("ac-btn-cancelar").style.display = "none";
+}
+
+async function publicarActaUI(id) {
+  if (!confirm("¿Publicar esta acta?\n\nSe generará el PDF y quedará visible para los clubes. Una vez publicada, YA NO se puede editar ni eliminar.")) return;
+  try {
+    const r = await api({ action: "publicarActa", id });
+    toast(r.msg || (r.ok?"Publicada":"Error"), r.ok?"ok":"err");
+    if (r.ok) cargarActas();
+  } catch(e) { toast("Error de conexión.","err"); }
+}
+
+async function eliminarActaUI(id) {
+  if (!confirm("¿Eliminar este borrador? Esta acción no se puede deshacer.")) return;
+  try {
+    const r = await api({ action: "eliminarActa", id });
+    toast(r.msg || (r.ok?"Eliminado":"Error"), r.ok?"ok":"err");
+    if (r.ok) cargarActas();
+  } catch(e) { toast("Error de conexión.","err"); }
+}
+
+// Comparte el acta publicada por WhatsApp: abre wa.me con un mensaje
+// prellenado y el link al PDF, para que el Admin lo tire al grupo de
+// socios o se lo mande directo a quien lo pida.
+function compartirActaWhatsApp(pdfLink, asunto) {
+  const mensaje = encodeURIComponent(`📄 Acta publicada: ${asunto}\n\nRevisa el documento aquí:\n${pdfLink}`);
+  window.open(`https://wa.me/?text=${mensaje}`, "_blank");
+}
+
 // Exporta exactamente lo que está viendo el admin en pantalla (respeta
 // el filtro de club y el checkbox "solo pendientes"), incluyendo los
 // links a cada documento — así el reporte que se envía al club permite
@@ -1471,19 +1723,24 @@ function initApp() {
   document.getElementById("login-wrap").style.display = "none";
   document.getElementById("app").classList.add("show");
 
-  const titulo = SESSION.rol === "admin" ? "Administrar" : (SESSION.nombreClub || SESSION.rutClub);
+  const titulo = SESSION.rol === "admin" ? "Administrar"
+    : SESSION.rol === "secretaria" ? "Secretaría — Reuniones"
+    : (SESSION.nombreClub || SESSION.rutClub);
   document.getElementById("topbar-logo").textContent = titulo;
 
   const badge = document.getElementById("rol-badge");
-  badge.textContent = SESSION.rol === "admin" ? "ADMIN" : "CLUB";
-  badge.className = "rol-badge " + (SESSION.rol === "admin" ? "rol-admin" : "rol-club");
+  badge.textContent = SESSION.rol === "admin" ? "ADMIN" : SESSION.rol === "secretaria" ? "SECRETARÍA" : "CLUB";
+  badge.className = "rol-badge " + (SESSION.rol === "admin" ? "rol-admin" : SESSION.rol === "secretaria" ? "rol-admin" : "rol-club");
 
-  // Construir tabs según rol
+  // Construir tabs según rol. Secretaría tiene acceso acotado: solo
+  // puede ver/gestionar Actas de reunión, nada más del panel Admin.
   const tabsEl = document.getElementById("app-tabs");
   tabsEl.innerHTML = "";
   const tabs = SESSION.rol === "admin"
-    ? [["miclub","Resumen"],["editar","Ingresar club"],["clubeslista","Clubes"],["jugadores","Jugadores"],["pases","Pases"],["sanciones","Sanciones"],["planificacion","Planificación"],["entrenadores","Entrenadores"],["selecciones","Selecciones"],["resumentemporada","Resumen Temporada"],["consulta","Consultar RUT"],["kpi","KPI"],["cmrevision","Carga Masiva FEBA"]]
-    : [["miclub","Mi club"],["editar","Ingresar club"],["jugadores","Jugadores"],["pases","Pases"],["sanciones","Sanciones"],["planificacion","Planificación"],["entrenadores","Entrenadores"],["selecciones","Selecciones"],["resumentemporada","Resumen Temporada"],["consulta","Consultar"]];
+    ? [["miclub","Resumen"],["editar","Ingresar club"],["clubeslista","Clubes"],["jugadores","Jugadores"],["pases","Pases"],["sanciones","Sanciones"],["planificacion","Planificación"],["entrenadores","Entrenadores"],["selecciones","Selecciones"],["resumentemporada","Resumen Temporada"],["actas","Actas"],["consulta","Consultar RUT"],["kpi","KPI"],["cmrevision","Carga Masiva FEBA"]]
+    : SESSION.rol === "secretaria"
+    ? [["actas","Actas"]]
+    : [["miclub","Mi club"],["editar","Ingresar club"],["jugadores","Jugadores"],["pases","Pases"],["sanciones","Sanciones"],["planificacion","Planificación"],["entrenadores","Entrenadores"],["selecciones","Selecciones"],["resumentemporada","Resumen Temporada"],["actas","Actas"],["consulta","Consultar"]];
 
   tabs.forEach(([id,label]) => {
     const b = document.createElement("button");
@@ -1492,7 +1749,7 @@ function initApp() {
     tabsEl.appendChild(b);
   });
 
-  showTab("miclub");
+  showTab(SESSION.rol === "secretaria" ? "actas" : "miclub");
 }
 
 function showTab(id) {
@@ -1514,10 +1771,11 @@ function showTab(id) {
   if (id === "planificacion") cargarPlanificacion();
   if (id === "editar" && SESSION.rutClub) precargarFormClub();
   if (id === "cmrevision") cargarRevisionCM();
+  if (id === "actas") cargarActas();
 }
 
 function tabLabel(id) {
-  const map = { miclub:"Mi club", editar:"Ingresar club", clubeslista:"Clubes", jugadores:"Jugadores", pases:"Pases", resumentemporada:"Resumen Temporada", sanciones:"Sanciones", entrenadores:"Entrenadores", selecciones:"Selecciones", kpi:"KPI", planificacion:"Planificación", consulta:"Consultar", cmrevision:"Carga Masiva FEBA" };
+  const map = { miclub:"Mi club", editar:"Ingresar club", clubeslista:"Clubes", jugadores:"Jugadores", pases:"Pases", resumentemporada:"Resumen Temporada", sanciones:"Sanciones", entrenadores:"Entrenadores", selecciones:"Selecciones", kpi:"KPI", planificacion:"Planificación", consulta:"Consultar", cmrevision:"Carga Masiva FEBA", actas:"Actas" };
   if (SESSION.rol === "admin") { map.miclub = "Resumen"; map.consulta = "Consultar RUT"; }
   return map[id] || id;
 }
