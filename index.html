@@ -340,9 +340,6 @@ tr:hover td { background: #EFF6FF; }
       <button class="access-btn" onclick="showAccess('cargamasiva')">
         <span class="t">📎 Carga Masiva FEBA</span>
       </button>
-      <button class="access-btn" onclick="showAccess('secretaria')">
-        <span class="t">📝 Reuniones (Secretaría)</span>
-      </button>
     </div>
   </div>
 
@@ -408,26 +405,6 @@ tr:hover td { background: #EFF6FF; }
     <button class="btn-login" onclick="doLogin('cargamasiva')">Ingresar</button>
     <div id="login-error-cargamasiva" class="login-error"></div>
     <div class="login-public-link"><a onclick="copiarEnlaceAcceso('cargamasiva')">🔗 Copiar enlace directo a este acceso</a></div>
-  </div>
-
-  <!-- Login Secretaría (Reuniones / Actas) -->
-  <div id="login-secretaria-card" class="login-card" style="display:none">
-    <span class="back-link" onclick="showAccess('selector')">← Volver</span>
-    <div class="login-logo">
-      <h1 style="font-size:17px">Reuniones — Secretaría</h1>
-      <p style="font-size:12px;color:var(--muted);margin-top:4px">Acceso acotado: solo permite gestionar actas de reunión</p>
-    </div>
-    <div class="field">
-      <label>Usuario</label>
-      <input id="l-usuario-sec" type="text" placeholder="Usuario" autocomplete="off">
-    </div>
-    <div class="field">
-      <label>Clave</label>
-      <input id="l-clave-sec" type="password" placeholder="••••••••••••••" autocomplete="off">
-    </div>
-    <button class="btn-login" onclick="doLogin('secretaria')">Ingresar</button>
-    <div id="login-error-secretaria" class="login-error"></div>
-    <div class="login-public-link"><a onclick="copiarEnlaceAcceso('secretaria')">🔗 Copiar enlace directo a este acceso</a></div>
   </div>
 
   <!-- Búsqueda pública por RUT (sin login) -->
@@ -1126,7 +1103,6 @@ function showAccess(which) {
   document.getElementById("login-club-card").style.display  = which === "club"     ? "block" : "none";
   document.getElementById("login-admin-card").style.display = which === "admin"    ? "block" : "none";
   document.getElementById("login-cargamasiva-card").style.display = which === "cargamasiva" ? "block" : "none";
-  document.getElementById("login-secretaria-card").style.display = which === "secretaria" ? "block" : "none";
   document.getElementById("public-card").classList.toggle("show", which === "publico");
   document.getElementById("public-card").style.display = which === "publico" ? "block" : "none";
   if (which === "publico") {
@@ -1136,7 +1112,7 @@ function showAccess(which) {
   }
 
   // Reflejar el acceso en la URL para poder compartir el enlace directo
-  const mapUrl = { club: "club", admin: "admin", publico: "consulta", cargamasiva: "cargamasiva", secretaria: "secretaria" };
+  const mapUrl = { club: "club", admin: "admin", publico: "consulta", cargamasiva: "cargamasiva" };
   const url = new URL(window.location.href);
   if (mapUrl[which]) url.searchParams.set("acceso", mapUrl[which]);
   else url.searchParams.delete("acceso");
@@ -1145,7 +1121,7 @@ function showAccess(which) {
 
 // Copia al portapapeles el enlace directo al acceso que se está viendo
 function copiarEnlaceAcceso(tipo) {
-  const mapUrl = { club: "club", admin: "admin", publico: "consulta", cargamasiva: "cargamasiva", secretaria: "secretaria" };
+  const mapUrl = { club: "club", admin: "admin", publico: "consulta", cargamasiva: "cargamasiva" };
   const url = new URL(window.location.href);
   url.search = ""; url.hash = "";
   url.searchParams.set("acceso", mapUrl[tipo]);
@@ -1160,15 +1136,15 @@ function copiarEnlaceAcceso(tipo) {
 (function abrirAccesoDesdeURL() {
   const params = new URLSearchParams(window.location.search);
   const acceso = params.get("acceso");
-  const mapAcceso = { club: "club", admin: "admin", consulta: "publico", cargamasiva: "cargamasiva", secretaria: "secretaria" };
+  const mapAcceso = { club: "club", admin: "admin", consulta: "publico", cargamasiva: "cargamasiva" };
   if (acceso && mapAcceso[acceso]) showAccess(mapAcceso[acceso]);
 })();
 
 async function doLogin(tipo) {
-  const errId = tipo === "club" ? "login-error-club" : tipo === "cargamasiva" ? "login-error-cargamasiva" : tipo === "secretaria" ? "login-error-secretaria" : "login-error-admin";
+  const errId = tipo === "club" ? "login-error-club" : tipo === "cargamasiva" ? "login-error-cargamasiva" : "login-error-admin";
   const errEl = document.getElementById(errId);
   errEl.classList.remove("show");
-  const cardId = tipo === "club" ? "login-club-card" : tipo === "cargamasiva" ? "login-cargamasiva-card" : tipo === "secretaria" ? "login-secretaria-card" : "login-admin-card";
+  const cardId = tipo === "club" ? "login-club-card" : tipo === "cargamasiva" ? "login-cargamasiva-card" : "login-admin-card";
   const btn = document.querySelector("#"+cardId+" .btn-login");
   btn.disabled = true; btn.textContent = "Verificando...";
 
@@ -1185,12 +1161,6 @@ async function doLogin(tipo) {
       rutClub: document.getElementById("l-rut-cm").value.trim(),
       clave:   document.getElementById("l-clave-cm").value.trim(),
       correo:  document.getElementById("l-correo-cm").value.trim()
-    };
-  } else if (tipo === "secretaria") {
-    body = {
-      action:  "login",
-      usuario: document.getElementById("l-usuario-sec").value.trim(),
-      clave:   document.getElementById("l-clave-sec").value.trim()
     };
   } else {
     body = {
@@ -1464,7 +1434,7 @@ let ACTAS_CACHE = [];
 let CLUBES_ACTA_CACHE = [];
 
 async function cargarActas() {
-  const esAdmin = SESSION.rol === "admin" || SESSION.rol === "secretaria";
+  const esAdmin = SESSION.rol === "admin";
   document.getElementById("card-nueva-acta").style.display = esAdmin ? "block" : "none";
   document.getElementById("actas-subtitulo").textContent = esAdmin ? "Borrador → Publicada" : "Actas publicadas";
   if (esAdmin && CLUBES_ACTA_CACHE.length === 0) await cargarClubesParaActa();
@@ -1494,9 +1464,15 @@ function cardActa(a, esAdmin) {
     </div>`;
   } else if (a.estado === "Publicada") {
     const asuntoEsc = (a.asunto||"").replace(/'/g,"\\'");
+    // El borrado de una PUBLICADA es exclusivo del Administrador —
+    // Secretaría puede publicar, pero no eliminar el registro oficial.
+    const btnEliminarPublicada = SESSION.rol === "admin"
+      ? `<button class="btn-sec" style="margin:0;padding:6px 12px;font-size:12px;color:var(--red);border-color:#FCA5A5" onclick="eliminarActaUI(${a.id})">🗑️ Eliminar</button>`
+      : "";
     acciones = `<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <a href="${a.pdfLink}" target="_blank" rel="noopener" class="btn-xls sec" style="text-decoration:none">⬇ Descargar PDF</a>
       <button class="btn-xls" onclick="compartirActaWhatsApp('${a.pdfLink}','${asuntoEsc}')">📲 Compartir por WhatsApp</button>
+      ${btnEliminarPublicada}
     </div>`;
   }
 
@@ -1626,7 +1602,12 @@ async function publicarActaUI(id) {
 }
 
 async function eliminarActaUI(id) {
-  if (!confirm("¿Eliminar este borrador? Esta acción no se puede deshacer.")) return;
+  const a = ACTAS_CACHE.find(x => x.id === id);
+  const esPublicada = a && a.estado === "Publicada";
+  const mensaje = esPublicada
+    ? "⚠️ Esta acta ya está PUBLICADA — es el registro oficial de la reunión.\n\nSe eliminará también el PDF guardado en Drive. Esta acción NO se puede deshacer.\n\n¿Confirmas que quieres eliminarla de todas formas?"
+    : "¿Eliminar este borrador? Esta acción no se puede deshacer.";
+  if (!confirm(mensaje)) return;
   try {
     const r = await api({ action: "eliminarActa", id });
     toast(r.msg || (r.ok?"Eliminado":"Error"), r.ok?"ok":"err");
@@ -1723,23 +1704,18 @@ function initApp() {
   document.getElementById("login-wrap").style.display = "none";
   document.getElementById("app").classList.add("show");
 
-  const titulo = SESSION.rol === "admin" ? "Administrar"
-    : SESSION.rol === "secretaria" ? "Secretaría — Reuniones"
-    : (SESSION.nombreClub || SESSION.rutClub);
+  const titulo = SESSION.rol === "admin" ? "Administrar" : (SESSION.nombreClub || SESSION.rutClub);
   document.getElementById("topbar-logo").textContent = titulo;
 
   const badge = document.getElementById("rol-badge");
-  badge.textContent = SESSION.rol === "admin" ? "ADMIN" : SESSION.rol === "secretaria" ? "SECRETARÍA" : "CLUB";
-  badge.className = "rol-badge " + (SESSION.rol === "admin" ? "rol-admin" : SESSION.rol === "secretaria" ? "rol-admin" : "rol-club");
+  badge.textContent = SESSION.rol === "admin" ? "ADMIN" : "CLUB";
+  badge.className = "rol-badge " + (SESSION.rol === "admin" ? "rol-admin" : "rol-club");
 
-  // Construir tabs según rol. Secretaría tiene acceso acotado: solo
-  // puede ver/gestionar Actas de reunión, nada más del panel Admin.
+  // Construir tabs según rol
   const tabsEl = document.getElementById("app-tabs");
   tabsEl.innerHTML = "";
   const tabs = SESSION.rol === "admin"
     ? [["miclub","Resumen"],["editar","Ingresar club"],["clubeslista","Clubes"],["jugadores","Jugadores"],["pases","Pases"],["sanciones","Sanciones"],["planificacion","Planificación"],["entrenadores","Entrenadores"],["selecciones","Selecciones"],["resumentemporada","Resumen Temporada"],["actas","Actas"],["consulta","Consultar RUT"],["kpi","KPI"],["cmrevision","Carga Masiva FEBA"]]
-    : SESSION.rol === "secretaria"
-    ? [["actas","Actas"]]
     : [["miclub","Mi club"],["editar","Ingresar club"],["jugadores","Jugadores"],["pases","Pases"],["sanciones","Sanciones"],["planificacion","Planificación"],["entrenadores","Entrenadores"],["selecciones","Selecciones"],["resumentemporada","Resumen Temporada"],["actas","Actas"],["consulta","Consultar"]];
 
   tabs.forEach(([id,label]) => {
@@ -1749,7 +1725,7 @@ function initApp() {
     tabsEl.appendChild(b);
   });
 
-  showTab(SESSION.rol === "secretaria" ? "actas" : "miclub");
+  showTab("miclub");
 }
 
 function showTab(id) {
